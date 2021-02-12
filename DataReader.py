@@ -34,12 +34,54 @@ df_test.reset_index(drop=True, inplace=True)
 df_sort = df.set_index(df.groupby('case concept:name').cumcount(), append = True)
 
 # Calculate the most common activity at each position
-df_new = df_sort.groupby(level=1)["event concept:name"].transform(lambda x: x.value_counts().index[0])
-df_new = df_new.to_frame()
-df_new = df_new.rename(columns = {'event concept:name' : "common activity"})
+#df_new = df_sort.groupby(level=1)["event concept:name"].transform(lambda x: x.value_counts().index[0])
+#df_new = df_new.to_frame()
+#df_new = df_new.rename(columns = {'event concept:name' : "common activity"})
 
 # Append to a new column
-df_sort = df_sort.join(df_new["common activity"])
+#df_sort = df_sort.join(df_new["common activity"])
+
+def make_event_pred(df_train, df_test):
+
+    '''Parameters: df_train: training set
+                   df_test: test set
+                   
+       We can change to csv as input and making the sets or create a different function for it'''
+    preds = pd.DataFrame() # we can return this df in order to et only the predictions for accuracy scores
+    
+    df_sort = df_train.set_index(df_train.groupby('case concept:name').cumcount(), append = True)
+    df_new = df_sort.groupby(level=1)["event concept:name"].transform(lambda x: x.value_counts().index[0])
+    df_new = df_new.to_frame()
+    common_acts = df_new.rename(columns = {'event concept:name' : "common activity"})
+    
+    test = df_test.set_index(df_test.groupby('case concept:name').cumcount(), append = True)
+    
+    # Here we can implement the average time to add later in the dataframe
+    test = test.rename(columns = {'event time:timestamp' : "timestamp"})
+    test['timestamp'] = pd.to_datetime(test.timestamp) 
+    
+    
+    max_list = common_acts.groupby(level=1).apply(max).copy() # Get process with max(N) for predictions
+    
+    for i, df in test.groupby('case concept:name'):
+        length = len(df)
+        test = test.append({'case concept:name':int(i),
+                            'event concept:name': max_list.loc[length, 'common activity']}, ignore_index=True)
+                            #'timestamp': dt.datetime(2012, 2, 14, 23, 59, 59)}, ignore_index=True)
+                            # here we can add the time of the added new event
+                
+        preds = preds.append({'case concept:name':int(i),
+                            'event concept:name': max_list.loc[length, 'common activity']}, ignore_index=True)
+                            #'timestamp': dt.datetime(2012, 2, 14, 23, 59, 59)}, ignore_index=True) 
+            
+    test = test.set_index(test.groupby('case concept:name').cumcount(), append = True)
+    
+    # Depending on how we want it we should sort: test = test.sort_values(time, case name, etc.)
+    test = test.sort_values('timestamp') # now sorted by time
+    
+    return preds #test
+
+result = make_event_pred(df_train, df_test)
 
 # Save the output
-df_sort.to_csv(output_name + ".csv")
+result.to_csv(output_name + ".csv")
