@@ -1,8 +1,6 @@
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
-from scipy.stats import mode
-from datetime import datetime
 
 
 def process_data():
@@ -47,25 +45,79 @@ def process_data():
 # Append to a new column
 #df_sort = df_sort.join(df_new["common activity"])
 
-def make_event_pred(df_train, df_test):
+# def make_event_pred(df_train, df_test):
 
+#     '''Parameters: df_train: training set
+#                    df_test: test set           '''
+    
+#     # Assign position number to each event
+#     df_common = df_train.set_index(df_train.groupby('case concept:name').cumcount(), append = True)
+#     df_common = df_common.reset_index()
+#     df_common = df_common[["level_1", "event concept:name"]]
+
+#     # Find the most frequent event in each position using mode
+#     df_result = df_common.groupby('level_1')['event concept:name'].apply(lambda x: mode(x)[0][0]).reset_index()
+#     df_result = df_result.rename(columns={'level_1':'position', 'event concept:name':'Predicted event'})
+    
+#     return df_result
+
+def make_pred(df_train, df_test):
+    
     '''Parameters: df_train: training set
                    df_test: test set           '''
     
     # Assign position number to each event
-    df_common = df_train.set_index(df_train.groupby('case concept:name').cumcount(), append = True)
-    df_common = df_common.reset_index()
-    df_common = df_common[["level_1", "event concept:name"]]
+    df_sort = df_train.set_index(df_train.groupby('case concept:name').cumcount(), append = True)
+    df_sort = df_sort.reset_index()
+    df_sort2 = df_sort[["level_1", "event concept:name"]]
 
     # Find the most frequent event in each position using mode
-    df_result = df_common.groupby('level_1')['event concept:name'].apply(lambda x: mode(x)[0][0]).reset_index()
-    df_result = df_result.rename(columns={'level_1':'position', 'event concept:name':'Predicted event'})
-    
-    return df_result
+    df_new = df_sort2.groupby('level_1')['event concept:name'].apply(lambda x: mode(x)[0][0]).reset_index()
+    df_new = df_new.rename(columns={'level_1':'position', 'event concept:name':'Predicted event'})
+    df_new
+
+
+    df_sort = df_sort.set_index(df_sort.groupby('case concept:name').cumcount(), append = True)
+    df_sorted = df_sort.sort_values(['case concept:name','level_1'])#reset_index()
+    df_sorted
+
+    # Calculating Expected Time
+    correct = {}
+    temp = []
+    previous = []
+    for count,row in df_sorted.iterrows():
+        
+        i = row["level_1"];   
+        if i == 0:
+                temp = row["case REG_DATE"]
+                if len(temp) == 25:
+                    part1,part2 = temp.split("+")
+                    part1 = part1 + ".000+"
+                    temp = part1+part2
+                    print(temp)
+                temp = temp.replace("T"," ")
+                temp,_ = temp.split("+")
+                date_time_obj = datetime.datetime.strptime(temp, '%Y-%m-%d %H:%M:%S.%f')
+                calc  = row["event time:time"] - date_time_obj
+        if i != 0:
+                calc  = row["event time:time"] - previous["event time:time"]
+        if i in correct:
+                    correct[i].append(calc)
+        else:
+                    correct[i] = [calc]
+        previous = row
+
+    actual = []
+    for key in correct:
+            actual.append(str(functools.reduce(operator.add, correct[key])/len(correct[key])))
+    actual
+    df_new["Expected time"] = actual
+
+    return df_new
 
 def save_results(output_name):
     result.to_csv(output_name + ".csv")
 
 df_train, df_test, output_name = process_data()
-result = make_event_pred(df_train, df_test)
+result = make_pred(df_train, df_test)
 save_results(output_name)
