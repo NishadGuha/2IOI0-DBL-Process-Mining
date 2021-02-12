@@ -1,12 +1,10 @@
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
-import datetime
-import matplotlib.pyplot as plt
 from scipy.stats import mode
 import operator
-import functools 
-
+import functools
+import datetime 
 
 def process_data():
     # Read input
@@ -70,6 +68,7 @@ def make_pred(df_train, df_test):
     
     '''Parameters: df_train: training set
                    df_test: test set           '''
+
     
     # Assign position number to each event
     df_sort = df_train.set_index(df_train.groupby('case concept:name').cumcount(), append = True)
@@ -103,9 +102,9 @@ def make_pred(df_train, df_test):
                 temp = temp.replace("T"," ")
                 temp,_ = temp.split("+")
                 date_time_obj = datetime.datetime.strptime(temp, '%Y-%m-%d %H:%M:%S.%f')
-                calc  = row["event time:time"] - date_time_obj
+                calc  = row["event time:timestamp"] - date_time_obj
         if i != 0:
-                calc  = row["event time:time"] - previous["event time:time"]
+                calc  = row["event time:timestamp"] - previous["event time:timestamp"]
         if i in correct:
                     correct[i].append(calc)
         else:
