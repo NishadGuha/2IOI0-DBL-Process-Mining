@@ -42,12 +42,10 @@ def make_pred(df_train, df_test):
     # Find the most frequent event in each position using mode
     df_new = df_sort2.groupby('level_1')['event concept:name'].apply(lambda x: mode(x)[0][0]).reset_index()
     df_new = df_new.rename(columns={'level_1':'position', 'event concept:name':'Predicted event'})
-    df_new
 
 
     df_sort = df_sort.set_index(df_sort.groupby('case concept:name').cumcount(), append = True)
     df_sorted = df_sort.sort_values(['case concept:name','level_1'])#reset_index()
-    df_sorted
 
     # Calculating Expected Time
     correct = {}
@@ -62,7 +60,7 @@ def make_pred(df_train, df_test):
                     part1,part2 = temp.split("+")
                     part1 = part1 + ".000+"
                     temp = part1+part2
-                    print(temp)
+
                 temp = temp.replace("T"," ")
                 temp,_ = temp.split("+")
                 date_time_obj = datetime.datetime.strptime(temp, '%Y-%m-%d %H:%M:%S.%f')
